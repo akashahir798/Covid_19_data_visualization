@@ -7,15 +7,9 @@ python-multipart==0.0.6
 sqlalchemy==2.0.25
 alembic==1.13.1
 
-# Data Processing - Using simplejson instead of pandas for compatibility
+# Data Processing
 simplejson==3.19.2
 requests==2.31.0
-
-# Machine Learning
-scikit-learn==1.4.0
-
-# Data Caching
-python-cache==0.6.1
 
 # Date/Time
 python-dateutil==2.8.2
