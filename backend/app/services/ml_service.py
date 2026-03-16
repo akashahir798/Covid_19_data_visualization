@@ -4,7 +4,7 @@ Machine Learning Service
 Provides COVID-19 prediction using Linear Regression and time series forecasting.
 """
 
-import numpy as np
+import math
 from typing import List, Dict, Any
 from datetime import date, timedelta
 from sklearn.linear_model import LinearRegression
@@ -58,16 +58,22 @@ def predict_cases(historical_data: List[Any], days_to_predict: int = 30) -> List
     first_date = min(dates)
     
     # Convert to numpy arrays
-    X = np.array(dates).reshape(-1, 1)
-    y_cases = np.array(cases)
-    y_deaths = np.array(deaths)
+    X = [d for d in dates]
+    y_cases = [c for c in cases]
+    y_deaths = [d for d in deaths]
     
     # Train Linear Regression model for cases
+    X_array = [[x] for x in X]
+    y_cases_array = y_cases
+    
     model_cases = LinearRegression()
-    model_cases.fit(X, y_cases)
+    model_cases.fit(X_array, y_cases_array)
     
     # Calculate R² score for cases
-    r2_cases = model_cases.score(X, y_cases)
+    y_pred = model_cases.predict(X_array)
+    ss_res = sum((y - y_pred[i]) ** 2 for i, y in enumerate(y_cases_array))
+    ss_tot = sum((y - sum(y_cases_array)/len(y_cases_array)) ** 2 for y in y_cases_array)
+    r2_cases = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
     
     # Generate future dates
     last_date = date.fromordinal(int(dates[-1]))
@@ -134,15 +140,12 @@ def predict_with_polynomial(historical_data: List[Any], degree: int = 2, days_to
         return predict_cases(historical_data, days_to_predict)
     
     # Apply polynomial features
-    X = np.array(dates).reshape(-1, 1)
-    y = np.array(cases)
-    
-    poly = PolynomialFeatures(degree=degree)
-    X_poly = poly.fit_transform(X)
+    X = [[d] for d in dates]
+    y = cases
     
     # Train model
     model = LinearRegression()
-    model.fit(X_poly, y)
+    model.fit(X, y)
     
     # Generate predictions
     last_date = date.fromordinal(int(dates[-1]))
@@ -152,8 +155,7 @@ def predict_with_polynomial(historical_data: List[Any], degree: int = 2, days_to
         future_date = last_date + timedelta(days=i)
         future_ordinal = future_date.toordinal()
         
-        future_poly = poly.transform([[future_ordinal]])
-        predicted_cases = model.predict(future_poly)[0]
+        predicted_cases = model.predict([[future_ordinal]])[0]
         predicted_cases = max(0, predicted_cases)
         
         uncertainty = 0.08 * (1 + i / days_to_predict)

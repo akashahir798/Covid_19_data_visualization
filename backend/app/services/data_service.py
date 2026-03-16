@@ -4,91 +4,10 @@ Data Service
 Provides data processing and cleaning functions.
 """
 
-import pandas as pd
-import numpy as np
+import simplejson as json
+import requests
 from typing import List, Dict, Any, Optional
 from datetime import date, datetime
-import requests
-
-
-def fetch_covid_data(source: str = "jhu") -> pd.DataFrame:
-    """
-    Fetch COVID-19 data from public sources.
-    
-    Args:
-        source: Data source (jhu, owid)
-    
-    Returns:
-        DataFrame with COVID data
-    """
-    if source == "jhu":
-        # Johns Hopkins GitHub repository
-        url = "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
-        
-        try:
-            df = pd.read_csv(url)
-            return df
-        except Exception as e:
-            print(f"Error fetching JHU data: {e}")
-            return pd.DataFrame()
-    
-    return pd.DataFrame()
-
-
-def clean_covid_data(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Clean and preprocess COVID-19 data.
-    
-    Args:
-        df: Raw DataFrame
-    
-    Returns:
-        Cleaned DataFrame
-    """
-    if df.empty:
-        return df
-    
-    # Rename columns
-    df = df.rename(columns={
-        'Province/State': 'province',
-        'Country/Region': 'country',
-        'Lat': 'lat',
-        'Long': 'lon'
-    })
-    
-    # Melt the dataframe (convert wide to long format)
-    id_cols = ['province', 'country', 'lat', 'lon']
-    date_cols = [col for col in df.columns if col not in id_cols]
-    
-    df_melted = df.melt(
-        id_vars=id_cols,
-        value_vars=date_cols,
-        var_name='date_str',
-        value_name='confirmed'
-    )
-    
-    # Convert date
-    df_melted['date'] = pd.to_datetime(df_melted['date_str'], format='%m/%d/%y').dt.date
-    
-    # Fill NaN values
-    df_melted['province'] = df_melted['province'].fillna('')
-    df_melted['confirmed'] = df_melted['confirmed'].fillna(0)
-    
-    # Aggregate by country (sum provinces)
-    df_agg = df_melted.groupby(['country', 'date']).agg({
-        'confirmed': 'sum',
-        'lat': 'first',
-        'lon': 'first'
-    }).reset_index()
-    
-    # Sort by country and date
-    df_agg = df_agg.sort_values(['country', 'date'])
-    
-    # Calculate daily new cases
-    df_agg['new_cases'] = df_agg.groupby('country')['confirmed'].diff().fillna(0)
-    df_agg['new_cases'] = df_agg['new_cases'].clip(lower=0)
-    
-    return df_agg
 
 
 def generate_sample_data() -> List[Dict[str, Any]]:
@@ -119,18 +38,20 @@ def generate_sample_data() -> List[Dict[str, Any]]:
     
     # Generate 90 days of data
     data = []
-    start_date = date.today() - pd.Timedelta(days=90)
+    import datetime
+    start_date = datetime.date.today() - datetime.timedelta(days=90)
     
     for country in countries:
-        cases = 100000 + np.random.randint(0, 100000)
+        cases = 100000 + (hash(country['code']) % 100000)
         deaths = int(cases * 0.02)
         recovered = int(cases * 0.85)
         
         for day in range(90):
-            current_date = start_date + pd.Timedelta(days=day)
+            current_date = start_date + datetime.timedelta(days=day)
             
             # Add some variation
-            new_cases = np.random.randint(1000, 10000)
+            import random
+            new_cases = random.randint(1000, 10000)
             new_deaths = int(new_cases * 0.02)
             new_recovered = int(new_cases * 0.9)
             
