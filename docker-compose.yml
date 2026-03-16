@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  # Backend API Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: covid_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - covid_data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:///./covid_data.db
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    networks:
+      - covid_network
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: covid_frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - covid_network
+
+volumes:
+  covid_data:
+
+networks:
+  covid_network:
+    driver: bridge
